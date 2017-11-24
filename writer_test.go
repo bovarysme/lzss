@@ -3,9 +3,7 @@ package lzss
 import (
 	"bytes"
 	"io/ioutil"
-	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -29,29 +27,19 @@ func TestReverse(t *testing.T) {
 }
 
 func TestRoundTrip(t *testing.T) {
-	var testCases = []struct {
-		filename       string
-		compressedSize int
-	}{
-		{"gettysburg.txt", 1059},
-		{"Mark.Twain-Tom.Sawyer.txt", 207910},
-		{"purple_heart.raw", 6536},
+	var filenames = []string{
+		"gettysburg.txt",
+		"Mark.Twain-Tom.Sawyer.txt",
+		"purple_heart.raw",
 	}
 
-	for _, testCase := range testCases {
-		basename := testCase.filename
-		name := strings.TrimSuffix(basename, filepath.Ext(basename)) + ".output"
-		path := filepath.Join("testdata", name)
+	for _, filename := range filenames {
+		buffer := new(bytes.Buffer)
 
-		file, err := os.Create(path)
-		if err != nil {
-			t.Fatalf("os.Create: %v", err)
-		}
+		writer := NewWriter(buffer)
 
-		writer := NewWriter(file)
-
-		want := readFile(t, testCase.filename)
-		n, err := writer.Write(want)
+		want := readFile(t, filename)
+		_, err := writer.Write(want)
 		if err != nil {
 			t.Fatalf("Writer.Write: %v", err)
 		}
@@ -61,18 +49,7 @@ func TestRoundTrip(t *testing.T) {
 			t.Fatalf("Writer.Close: %v", err)
 		}
 
-		if n != testCase.compressedSize {
-			t.Errorf("%q: wrote %d bytes, want %d", testCase.filename, n, testCase.compressedSize)
-		}
-
-		err = file.Close()
-		if err != nil {
-			t.Fatalf("file.Close: %v", err)
-		}
-
-		compressed := readFile(t, name)
-		br := bytes.NewReader(compressed)
-		reader := NewReader(br)
+		reader := NewReader(buffer)
 
 		got, err := ioutil.ReadAll(reader)
 		if err != nil {
@@ -81,7 +58,33 @@ func TestRoundTrip(t *testing.T) {
 
 		if !bytes.Equal(got, want) {
 			t.Errorf("%q: compressing and then decompressing is not the identity function",
-				testCase.filename)
+				filename)
 		}
+	}
+}
+
+func TestWriterClosed(t *testing.T) {
+	buffer := new(bytes.Buffer)
+
+	writer := NewWriter(buffer)
+
+	_, err := writer.Write([]byte("hello, hello, world\n"))
+	if err != nil {
+		t.Fatalf("Writer.Write: %v", err)
+	}
+
+	err = writer.Close()
+	if err != nil {
+		t.Fatalf("Writer.Close: %v", err)
+	}
+
+	_, err = writer.Write([]byte("hello again, world\n"))
+	if err != ErrWriterClosed {
+		t.Fatalf("Writer.Write after Close: %v", err)
+	}
+
+	err = writer.Close()
+	if err != ErrWriterClosed {
+		t.Fatalf("Writer.Close after Close: %v", err)
 	}
 }
