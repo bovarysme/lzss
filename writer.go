@@ -52,8 +52,8 @@ func (w *Writer) Write(buffer []byte) (int, error) {
 
 	for pointer < len(buffer) {
 		end := pointer + maxMatchLength
-		if end >= len(buffer) {
-			end = len(buffer) - 1
+		if end > len(buffer) {
+			end = len(buffer)
 		}
 
 		length, offset := w.window.FindMatch(buffer[pointer:end])
