@@ -26,60 +26,61 @@ func NewWindow() *Window {
 	}
 }
 
+// Assuming: len(buffer) <= maxMatchLength
 func (window *Window) FindMatch(buffer []byte) (int, int) {
+	// XXX: bounds checking buffer optimizes away a call to runtime.panicindex
+	// when accessing buffer[0]
+	if len(buffer) <= 0 {
+		return 0, 0
+	}
+
 	length := 0
 	offset := 0
 
-	pointer := (window.pointer - 1) & windowMask
+	curLength := 0
 
-	for pointer != window.pointer {
-		currentLength := 0
-		for i := 0; i < len(buffer); i++ {
-			tempPointer := (pointer + i) & windowMask
+	pointer := window.pointer
+
+	for {
+		pointer = (pointer - 1) & windowMask
+		if pointer == window.pointer {
+			break
+		}
+
+		if buffer[0] != window.buffer[pointer] {
+			continue
+		}
+
+		for curLength = 1; curLength < len(buffer); curLength++ {
+			tempPointer := (pointer + curLength) & windowMask
 			if tempPointer == window.pointer {
 				break
 			}
 
-			if buffer[i] != window.buffer[tempPointer] {
+			if buffer[curLength] != window.buffer[tempPointer] {
 				break
 			}
-
-			currentLength++
 		}
 
-		if currentLength > length {
-			length = currentLength
+		if curLength > length {
+			length = curLength
 			offset = pointer
 
 			if offset == (window.pointer-length)&windowMask {
-				currentLength := 0
-				repetitions := 1
-				for i := length; i < len(buffer); i++ {
-					tempPointer := (offset + currentLength) & windowMask
-					if buffer[i] != window.buffer[tempPointer] {
-						break
-					}
-
-					currentLength++
-					if currentLength >= length {
-						currentLength = 0
-						repetitions++
-					}
-
-					if length*repetitions+currentLength >= maxMatchLength {
+				for ; curLength < len(buffer); curLength++ {
+					tempPointer := (offset + curLength%length) & windowMask
+					if buffer[curLength] != window.buffer[tempPointer] {
 						break
 					}
 				}
 
-				length = length*repetitions + currentLength
+				length = curLength
+			}
+
+			if length >= maxMatchLength {
+				break
 			}
 		}
-
-		if length >= maxMatchLength {
-			break
-		}
-
-		pointer = (pointer - 1) & windowMask
 	}
 
 	return length, offset
