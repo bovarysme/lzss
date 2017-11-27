@@ -73,12 +73,12 @@ func (w *Writer) Write(buffer []byte) (int, error) {
 		}
 
 		if w.flags>>8 == 1 {
-			m, err := w.flushBuffer()
+			nn, err := w.flushBuffer()
 			if err != nil {
 				return n, err
 			}
 
-			n += m
+			n += nn
 		}
 
 		w.window.WriteBytes(buffer[pointer : pointer+length])
