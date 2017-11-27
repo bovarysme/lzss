@@ -8,13 +8,8 @@ import (
 
 var ErrClosed = errors.New("lzss: reader/writer is closed")
 
-type ByteReadReader interface {
-	io.ByteReader
-	io.Reader
-}
-
 type Reader struct {
-	r      ByteReadReader
+	r      io.ByteReader
 	window *Window
 
 	flags int
@@ -30,7 +25,7 @@ type Reader struct {
 func NewReader(r io.Reader) *Reader {
 	reader := new(Reader)
 
-	br, ok := r.(ByteReadReader)
+	br, ok := r.(io.ByteReader)
 	if ok {
 		reader.r = br
 	} else {
@@ -84,7 +79,14 @@ func (r *Reader) read(buffer []byte) (int, error) {
 
 			r.window.WriteByte(b)
 		} else {
-			_, err := r.r.Read(r.match[:])
+			var err error
+
+			r.match[0], err = r.r.ReadByte()
+			if err != nil {
+				return n, err
+			}
+
+			r.match[1], err = r.r.ReadByte()
 			if err != nil {
 				return n, err
 			}
