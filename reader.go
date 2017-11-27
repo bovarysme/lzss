@@ -6,6 +6,8 @@ import (
 	"io"
 )
 
+// ErrClosed is returned when reading from (resp. writing to) or closing an
+// already closed io.ReadCloser (resp. io.WriteCloser).
 var ErrClosed = errors.New("lzss: reader/writer is closed")
 
 type Reader struct {
@@ -22,6 +24,13 @@ type Reader struct {
 	err error
 }
 
+// NewReader creates a new io.ReadCloser.
+// Reads from the returned io.ReadCloser read and decompress data from r.
+// If r does not also implement io.ByteReader, the io.ReadCloser may read more
+// data than necessary from r.
+//
+// It is the caller's responsibility to call Close on the io.ReadCloser when
+// done.
 func NewReader(r io.Reader) *Reader {
 	reader := new(Reader)
 
@@ -55,6 +64,9 @@ func (r *Reader) Read(buffer []byte) (int, error) {
 	return n, err
 }
 
+// read reads and decompresses bytes from r into buffer. If buffer becomes full
+// during a read, the remaining bytes will be stored into a temporary buffer and
+// copied over on the next call to Read.
 func (r *Reader) read(buffer []byte) (int, error) {
 	n := 0
 
@@ -121,6 +133,8 @@ func (r *Reader) read(buffer []byte) (int, error) {
 	return n, nil
 }
 
+// Close closes the io.ReadCloser, but it does not close the underlying
+// io.Reader.
 func (r *Reader) Close() error {
 	if r.err != nil {
 		return r.err
