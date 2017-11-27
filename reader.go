@@ -10,7 +10,7 @@ import (
 // already closed io.ReadCloser (resp. io.WriteCloser).
 var ErrClosed = errors.New("lzss: reader/writer is closed")
 
-type Reader struct {
+type reader struct {
 	r      io.ByteReader
 	window *Window
 
@@ -31,8 +31,8 @@ type Reader struct {
 //
 // It is the caller's responsibility to call Close on the io.ReadCloser when
 // done.
-func NewReader(r io.Reader) *Reader {
-	reader := new(Reader)
+func NewReader(r io.Reader) io.ReadCloser {
+	reader := new(reader)
 
 	br, ok := r.(io.ByteReader)
 	if ok {
@@ -47,7 +47,7 @@ func NewReader(r io.Reader) *Reader {
 	return reader
 }
 
-func (r *Reader) Read(buffer []byte) (int, error) {
+func (r *reader) Read(buffer []byte) (int, error) {
 	if r.err != nil {
 		return 0, r.err
 	}
@@ -67,7 +67,7 @@ func (r *Reader) Read(buffer []byte) (int, error) {
 // read reads and decompresses bytes from r into buffer. If buffer becomes full
 // during a read, the remaining bytes will be stored into a temporary buffer and
 // copied over on the next call to Read.
-func (r *Reader) read(buffer []byte) (int, error) {
+func (r *reader) read(buffer []byte) (int, error) {
 	n := 0
 
 	for n < len(buffer) {
@@ -135,7 +135,7 @@ func (r *Reader) read(buffer []byte) (int, error) {
 
 // Close closes the io.ReadCloser, but it does not close the underlying
 // io.Reader.
-func (r *Reader) Close() error {
+func (r *reader) Close() error {
 	if r.err != nil {
 		return r.err
 	}

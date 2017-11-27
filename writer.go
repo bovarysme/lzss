@@ -4,7 +4,7 @@ import (
 	"io"
 )
 
-type Writer struct {
+type writer struct {
 	w      io.Writer
 	window *Window
 
@@ -24,8 +24,8 @@ type Writer struct {
 //
 // It is the caller's responsibility to call Close on the io.WriteCloser when
 // done, as writes may be buffered and not flushed until Close.
-func NewWriter(w io.Writer) *Writer {
-	return &Writer{
+func NewWriter(w io.Writer) io.WriteCloser {
+	return &writer{
 		w:      w,
 		window: NewWindow(),
 
@@ -37,7 +37,7 @@ func NewWriter(w io.Writer) *Writer {
 
 // Write writes a compressed form of buffer to the underlying io.Writer. The
 // compressed bytes are not necessarily flushed until the io.WriteCloser is closed.
-func (w *Writer) Write(buffer []byte) (int, error) {
+func (w *writer) Write(buffer []byte) (int, error) {
 	if w.err != nil {
 		return 0, w.err
 	}
@@ -89,7 +89,7 @@ func (w *Writer) Write(buffer []byte) (int, error) {
 
 // Close closes the io.WriteCloser, flushing any unwritten data to the underlying
 // io.Writer. It does not close the underlying io.Writer.
-func (w *Writer) Close() error {
+func (w *writer) Close() error {
 	if w.err != nil {
 		return w.err
 	}
@@ -105,7 +105,7 @@ func (w *Writer) Close() error {
 }
 
 // flushBuffer flushes the io.WriteCloser to its underlying io.Writer.
-func (w *Writer) flushBuffer() (int, error) {
+func (w *writer) flushBuffer() (int, error) {
 	for w.flags>>8 != 1 {
 		w.flags = w.flags<<1 | 1
 	}
