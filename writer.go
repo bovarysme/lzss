@@ -1,11 +1,8 @@
 package lzss
 
 import (
-	"errors"
 	"io"
 )
-
-var ErrWriterClosed = errors.New("lzss: writer is closed")
 
 // A Writer takes data written to it and writes the compressed form of that
 // data to an underlying io.Writer (see NewWriter).
@@ -104,7 +101,7 @@ func (w *Writer) Close() error {
 		return err
 	}
 
-	w.err = ErrWriterClosed
+	w.err = ErrClosed
 
 	return nil
 }

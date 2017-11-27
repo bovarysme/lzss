@@ -56,6 +56,11 @@ func TestRoundTrip(t *testing.T) {
 			t.Fatalf("Reader.Read: %v", err)
 		}
 
+		err = reader.Close()
+		if err != nil {
+			t.Fatalf("Reader.Close: %v", err)
+		}
+
 		if !bytes.Equal(got, want) {
 			t.Errorf("%q: compressing and then decompressing is not the identity function",
 				filename)
@@ -79,12 +84,12 @@ func TestWriterClosed(t *testing.T) {
 	}
 
 	_, err = writer.Write([]byte("hello again, world\n"))
-	if err != ErrWriterClosed {
+	if err != ErrClosed {
 		t.Fatalf("Writer.Write after Close: %v", err)
 	}
 
 	err = writer.Close()
-	if err != ErrWriterClosed {
+	if err != ErrClosed {
 		t.Fatalf("Writer.Close after Close: %v", err)
 	}
 }

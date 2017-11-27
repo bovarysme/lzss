@@ -14,6 +14,7 @@ and how to read that data back:
 
 	reader := lzss.NewReader(buffer)
 	io.Copy(os.Stdout, reader)
+	reader.Close()
 
 */
 package lzss

@@ -2,8 +2,11 @@ package lzss
 
 import (
 	"bufio"
+	"errors"
 	"io"
 )
+
+var ErrClosed = errors.New("lzss: reader/writer is closed")
 
 type ByteReadReader interface {
 	io.ByteReader
@@ -20,6 +23,8 @@ type Reader struct {
 	buffer [maxMatchLength]byte
 	n      int
 	toRead []byte
+
+	err error
 }
 
 func NewReader(r io.Reader) *Reader {
@@ -39,6 +44,10 @@ func NewReader(r io.Reader) *Reader {
 }
 
 func (r *Reader) Read(buffer []byte) (int, error) {
+	if r.err != nil {
+		return 0, r.err
+	}
+
 	if len(r.toRead) > 0 {
 		n := copy(buffer, r.toRead)
 		r.toRead = r.toRead[n:]
@@ -60,6 +69,7 @@ func (r *Reader) read(buffer []byte) (int, error) {
 			if err != nil {
 				return n, err
 			}
+
 			r.flags = 0x100 | int(b)
 		}
 
@@ -107,4 +117,14 @@ func (r *Reader) read(buffer []byte) (int, error) {
 	r.n = 0
 
 	return n, nil
+}
+
+func (r *Reader) Close() error {
+	if r.err != nil {
+		return r.err
+	}
+
+	r.err = ErrClosed
+
+	return nil
 }
