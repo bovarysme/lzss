@@ -8,7 +8,7 @@ type writer struct {
 	w      io.Writer
 	window *Window
 
-	flags int
+	mask byte
 
 	// In the worst case scenario, 17 bytes have to be stored before being
 	// flushed to the underlying io.Writer: one byte for the current flags, and
@@ -29,7 +29,7 @@ func NewWriter(w io.Writer) io.WriteCloser {
 		w:      w,
 		window: NewWindow(),
 
-		flags: 1,
+		mask: 1,
 
 		n: 1,
 	}
@@ -59,18 +59,17 @@ func (w *writer) Write(buffer []byte) (int, error) {
 			w.buffer[w.n] = buffer[pointer]
 			w.n++
 
-			w.flags = w.flags<<1 | 1
+			w.buffer[0] |= w.mask
 		} else {
 			w.buffer[w.n] = byte(offset & 0xff)
 			w.n++
 
 			w.buffer[w.n] = byte((offset&0xf00)>>4 | (length - minMatchLength))
 			w.n++
-
-			w.flags = w.flags<<1 | 0
 		}
 
-		if w.flags>>8 == 1 {
+		w.mask <<= 1
+		if w.mask == 0 {
 			nn, err := w.flushBuffer()
 			if err != nil {
 				return n, err
@@ -106,28 +105,15 @@ func (w *writer) Close() error {
 
 // flushBuffer flushes the io.WriteCloser to its underlying io.Writer.
 func (w *writer) flushBuffer() (int, error) {
-	for w.flags>>8 != 1 {
-		w.flags = w.flags<<1 | 1
-	}
-
-	w.buffer[0] = reverse(byte(w.flags & 0xff))
-
 	n, err := w.w.Write(w.buffer[:w.n])
 	if err != nil {
 		return n, err
 	}
 
-	w.flags = 1
+	w.mask = 1
+
+	w.buffer[0] = 0
 	w.n = 1
 
 	return n, nil
-}
-
-// reverse reverses bits in a byte.
-func reverse(b byte) byte {
-	b = b&0x55<<1 | b&0xaa>>1
-	b = b&0x33<<2 | b&0xcc>>2
-	b = b&0x0f<<4 | b&0xf0>>4
-
-	return b
 }

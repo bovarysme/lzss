@@ -17,15 +17,6 @@ func readFile(tb testing.TB, name string) []byte {
 	return bytes
 }
 
-func TestReverse(t *testing.T) {
-	for i := byte(0); i < 255; i++ {
-		id := reverse(reverse(i))
-		if i != id {
-			t.Fatalf("identity is %d, want %d", id, i)
-		}
-	}
-}
-
 func TestRoundTrip(t *testing.T) {
 	var filenames = []string{
 		"gettysburg.txt",
